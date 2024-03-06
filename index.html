@@ -51,7 +51,7 @@ var svg = d3.select("body").append("svg")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
 // Load data from CSV file
-d3.csv("organizational_chart_data.csv", function(error, orgData) {
+d3.csv("data.csv", function(error, orgData) {
   if (error) throw error;
 
   // Convert CSV data to hierarchical data structure
@@ -173,3 +173,4 @@ function click(d) {
 
 </script>
 </body>
+</html>
