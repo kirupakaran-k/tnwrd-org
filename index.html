@@ -29,11 +29,11 @@
 
 var margin = {top: 20, right: 120, bottom: 20, left: 120},
     canvas_height = 700,
-    canvas_width = 960,
+    canvas_width = 960
     tree_width = canvas_width - margin.right - margin.left,
     tree_height = canvas_height - margin.top - margin.bottom,
     tree_level_depth = 180;
-
+    
 var i = 0,
     duration = 750,
     root;
@@ -50,17 +50,8 @@ var svg = d3.select("body").append("svg")
     .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-// Load data from CSV file
-d3.csv("data.csv", function(error, orgData) {
-  if (error) throw error;
-
-  // Convert CSV data to hierarchical data structure
-  var stratify = d3.layout.stratify()
-    .parentId(function(d) { return d.manager_id; });
-
-  root = stratify(orgData)
-    .sort(function(a, b) { return (a.height - b.height) || a.id.localeCompare(b.id); });
-
+d3.json("input_graph_tree.json", function(error, tree_data) {
+  root = tree_data;
   root.x0 = tree_height / 2;
   root.y0 = 0;
 
@@ -117,6 +108,7 @@ function update(source) {
   moved_node.select("text")
       .style("fill-opacity", 1);
 
+
   // Transition exiting nodes to the parent's new position.
   var hidden_nodes = node.exit().transition().duration(duration)
       .attr("transform", function(d) { return "translate(" + source.y + "," + source.x + ")"; })
@@ -126,9 +118,11 @@ function update(source) {
   hidden_nodes.select("text")
       .style("fill-opacity", 1e-6);
 
+
   // Update the links…
   var link = svg.selectAll("path.link")
       .data(links, function(d) { return d.target.id; });
+
 
   // Enter any new links at the parent's previous position.
   link.enter().insert("path", "g")
@@ -139,6 +133,8 @@ function update(source) {
       })
       .append("svg:title")
           .text(function(d, i) { return d.target.edge_name; });
+
+
 
   //Transition links to their new position.
   link.transition().duration(duration)
@@ -151,6 +147,7 @@ function update(source) {
         return diagonal({source: o, target: o});
       })
       .remove();
+
 
   // Stash the old positions for transition.
   nodes.forEach(function(d) {
@@ -172,5 +169,3 @@ function click(d) {
 }
 
 </script>
-</body>
-</html>
