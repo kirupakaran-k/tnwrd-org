@@ -3,41 +3,152 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
-  <script type="text/javascript">
-    google.charts.load('current', { 'packages': ['orgchart'] });
-    google.charts.setOnLoadCallback(drawChart);
-
-    function drawChart() {
-      var data = new google.visualization.DataTable();
-      data.addColumn('string', 'Name');
-      data.addColumn('string', 'Manager');
-      data.addColumn('string', 'ToolTip');
-
-      // Example data
-      data.addRows([
-        ['CEO', '', 'CEO'],
-        ['CTO', 'CEO', 'Chief Technology Officer'],
-        ['HR Manager', 'CEO', 'Human Resources Manager'],
-        ['Lead Developer', 'CTO', 'Lead Developer'],
-        ['Developer 1', 'Lead Developer', 'Developer'],
-        ['Developer 2', 'Lead Developer', 'Developer'],
-        ['HR Assistant 1', 'HR Manager', 'HR Assistant'],
-        ['HR Assistant 2', 'HR Manager', 'HR Assistant']
-      ]);
-
-      var chart = new google.visualization.OrgChart(document.getElementById('chart_div'));
-      chart.draw(data, { 'allowHtml': true, 'nodeClass': 'chart-node', 'size': 'large', 'isHorizontal': true });
-    }
-  </script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
   <style>
-    #chart_div {
-      height: 400px;
-      margin: 20px auto;
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    #chart {
+      margin: 20px;
+    }
+
+    .link {
+      fill: none;
+      stroke: #999;
+      stroke-opacity: 0.6;
+      stroke-width: 1.5;
+    }
+
+    .node {
+      font: 10px sans-serif;
+      cursor: pointer;
+    }
+
+    circle {
+      fill: #fff;
+      stroke: steelblue;
+      stroke-width: 1.5px;
     }
   </style>
 </head>
 <body>
-  <div id="chart_div"></div>
+  <div id="chart"></div>
+
+  <script>
+    // Example data
+    var data = [
+      { name: 'CEO', manager: '', tooltip: 'CEO' },
+      { name: 'CTO', manager: 'CEO', tooltip: 'Chief Technology Officer' },
+      { name: 'HR Manager', manager: 'CEO', tooltip: 'Human Resources Manager' },
+      { name: 'Lead Developer', manager: 'CTO', tooltip: 'Lead Developer' },
+      { name: 'Developer 1', manager: 'Lead Developer', tooltip: 'Developer' },
+      { name: 'Developer 2', manager: 'Lead Developer', tooltip: 'Developer' },
+      { name: 'HR Assistant 1', manager: 'HR Manager', tooltip: 'HR Assistant' },
+      { name: 'HR Assistant 2', manager: 'HR Manager', tooltip: 'HR Assistant' }
+    ];
+
+    var width = 800;
+    var height = 400;
+
+    var svg = d3.select("#chart")
+      .append("svg")
+      .attr("width", width)
+      .attr("height", height);
+
+    var g = svg.append("g")
+      .attr("transform", "translate(50, " + height / 2 + ")"); // Adjust the translate to center the chart
+
+    // Set up the hierarchical layout
+    var root = d3.stratify()
+      .id(function (d) { return d.name; })
+      .parentId(function (d) { return d.manager; })
+      (data);
+
+    var treeLayout = d3.tree().size([height, width - 200]);
+
+    var treeData = treeLayout(root);
+
+    // Draw links
+    var link = g.selectAll(".link")
+      .data(treeData.links())
+      .enter()
+      .append("path")
+      .attr("class", "link")
+      .attr("d", d3.linkHorizontal()
+        .x(function (d) { return d.y; })
+        .y(function (d) { return d.x; })
+      );
+
+    // Draw nodes
+    var nodes = g.selectAll(".node")
+      .data(treeData.descendants())
+      .enter()
+      .append("g")
+      .attr("class", "node")
+      .attr("transform", function (d) { return "translate(" + d.y + "," + d.x + ")"; })
+      .on("click", toggleCollapse);
+
+    nodes.append("circle")
+      .attr("r", 10);
+
+    nodes.append("text")
+      .attr("dy", 3)
+      .attr("x", function (d) { return d.children ? -8 : 8; })
+      .style("text-anchor", function (d) { return d.children ? "end" : "start"; })
+      .text(function (d) { return d.data.name; });
+
+    function toggleCollapse(d) {
+      if (d.children) {
+        d._children = d.children;
+        d.children = null;
+      } else {
+        d.children = d._children;
+        d._children = null;
+      }
+      update(d);
+    }
+
+    function update(source) {
+      treeData = treeLayout(root);
+
+      link = g.selectAll(".link")
+        .data(treeData.links());
+
+      link.enter().append("path")
+        .attr("class", "link")
+        .merge(link)
+        .attr("d", d3.linkHorizontal()
+          .x(function (d) { return d.y; })
+          .y(function (d) { return d.x; })
+        );
+
+      nodes = g.selectAll(".node")
+        .data(treeData.descendants(), function (d) { return d.id; });
+
+      nodes.exit().remove();
+
+      nodes.enter().append("g")
+        .attr("class", "node")
+        .attr("transform", function (d) { return "translate(" + source.y + "," + source.x + ")"; })
+        .on("click", toggleCollapse)
+        .merge(nodes)
+        .transition()
+        .duration(500)
+        .attr("transform", function (d) { return "translate(" + d.y + "," + d.x + ")"; });
+
+      nodes.selectAll("circle")
+        .attr("r", 10);
+
+      nodes.selectAll("text")
+        .attr("x", function (d) { return d.children ? -8 : 8; })
+        .style("text-anchor", function (d) { return d.children ? "end" : "start"; })
+        .text(function (d) { return d.data.name; });
+    }
+  </script>
 </body>
 </html>
